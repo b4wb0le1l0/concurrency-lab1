@@ -20,11 +20,11 @@ class DiningSimulationTest {
     }
 
     @Test
-    void foodIsSharedAlmostEqually() throws InterruptedException {
-        int[] eaten = new DiningSimulation(7, 100, 2).run();
+    void everyProgrammerGetsFood() throws InterruptedException {
+        int[] eaten = new DiningSimulation(7, 10_000, 2).run();
         assertEquals(7, eaten.length);
         for (int portions : eaten) {
-            assertTrue(portions == 14 || portions == 15);
+            assertTrue(portions > 0);
         }
     }
 
@@ -36,8 +36,15 @@ class DiningSimulationTest {
 
     @Test
     void worksWhenFoodIsNotEnoughForEveryone() throws InterruptedException {
-        int[] eaten = new DiningSimulation(7, 3, 1).run();
-        assertArrayEquals(new int[]{1, 1, 1, 0, 0, 0, 0}, eaten);
+        DiningSimulation dinner = new DiningSimulation(7, 3, 1);
+        int[] eaten = dinner.run();
+        int total = 0;
+        for (int portions : eaten) {
+            assertTrue(portions >= 0);
+            total += portions;
+        }
+        assertEquals(3, total);
+        assertEquals(0, dinner.getFood());
     }
 
     @Test

@@ -6,7 +6,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 class DiningSimulation {
     private final int programmerCount;
-    private final int totalFood;
     private int food;
     private final Semaphore waiters;
 
@@ -15,13 +14,11 @@ class DiningSimulation {
             throw new IllegalArgumentException("All numbers must be greater than zero");
         }
         this.programmerCount = programmerCount;
-        this.totalFood = food;
         this.food = food;
         waiters = new Semaphore(waiterCount, true);
     }
 
     int[] run() throws InterruptedException {
-        // One programmer still needs two spoons.
         ReentrantLock[] spoons = new ReentrantLock[Math.max(2, programmerCount)];
         for (int i = 0; i < spoons.length; i++) {
             spoons[i] = new ReentrantLock(true);
@@ -31,12 +28,8 @@ class DiningSimulation {
         for (int i = 0; i < programmerCount; i++) {
             int left = i;
             int right = (i + 1) % spoons.length;
-            int limit = totalFood / programmerCount;
-            if (i < totalFood % programmerCount) {
-                limit++;
-            }
             // Take the spoon with the smaller index first.
-            programmers[i] = new Programmer(this, limit,
+            programmers[i] = new Programmer(this,
                     spoons[Math.min(left, right)], spoons[Math.max(left, right)]);
         }
 
@@ -88,15 +81,13 @@ class DiningSimulation {
 
 class Programmer extends Thread {
     private final DiningSimulation dinner;
-    private final int limit;
     private final ReentrantLock firstSpoon;
     private final ReentrantLock secondSpoon;
     int eaten;
 
-    Programmer(DiningSimulation dinner, int limit,
+    Programmer(DiningSimulation dinner,
                ReentrantLock firstSpoon, ReentrantLock secondSpoon) {
         this.dinner = dinner;
-        this.limit = limit;
         this.firstSpoon = firstSpoon;
         this.secondSpoon = secondSpoon;
     }
@@ -104,7 +95,7 @@ class Programmer extends Thread {
     @Override
     public void run() {
         try {
-            while (eaten < limit && dinner.bringFood()) {
+            while (dinner.bringFood()) {
                 firstSpoon.lockInterruptibly();
                 try {
                     secondSpoon.lockInterruptibly();
@@ -135,12 +126,22 @@ public class Main {
         DiningSimulation dinner = new DiningSimulation(programmers, food, waiters);
         int[] eaten = dinner.run();
         int total = 0;
+        int min = eaten[0];
+        int max = eaten[0];
         for (int i = 0; i < eaten.length; i++) {
             System.out.println("Programmer " + (i + 1) + " ate: " + eaten[i]);
             total += eaten[i];
+            min = Math.min(min, eaten[i]);
+            max = Math.max(max, eaten[i]);
         }
         System.out.println("Total portions eaten: " + total);
         System.out.println("Portions left: " + dinner.getFood());
+        double average = (double) total / eaten.length;
+        System.out.println("Minimum portions: " + min);
+        System.out.println("Maximum portions: " + max);
+        System.out.printf("Average portions: %.2f%n", average);
+        System.out.printf("Spread relative to average: %.2f%%%n",
+                average == 0 ? 0 : (max - min) * 100.0 / average);
     }
 
     static int readNumber(Scanner scanner, String message) {
